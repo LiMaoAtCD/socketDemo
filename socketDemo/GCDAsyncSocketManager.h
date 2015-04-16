@@ -23,7 +23,7 @@ typedef void(^ConnectBlock)(BOOL success);
     GCDAsyncSocket *socket;
     SSDPServiceBrowser *_browser;
     NSMutableArray *IP_Items;
-    ConnectBlock block;
+    ConnectBlock connectBlock;
     
     NSMutableArray * Target_IP_Addresses;
     

@@ -48,7 +48,7 @@
     if (![socket connectToHost:IP onPort:kPort error:&error]) {
         NSLog(@"%@",error);
     }
-    block = completionHandler;
+    connectBlock = completionHandler;
 
     
 }
@@ -70,13 +70,8 @@
    
     NSLog(@"connected");
     //TODO::
-//    NSString *test = @"test";
-//    NSData *data = [test dataUsingEncoding:NSUTF8StringEncoding];
-//    [sock readDataWithTimeout:-1 tag:1];
-//    [sock writeData:data withTimeout:-1 tag:1];
-//    [sock disconnect];
     
-    block(YES);
+    connectBlock(YES);
 
 }
 
@@ -84,8 +79,8 @@
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err{
     NSLog(@"disconnected");
-    if (block) {
-        block(NO);
+    if (connectBlock) {
+        connectBlock(NO);
     }
 
 }
@@ -144,17 +139,18 @@
 //            [self connectToIPAddress:service.location.host];
             [self connectToIPAddress:service.location.host withCompletionHandler:^(BOOL success) {
                 if(success) {
+                    
                     [Target_IP_Addresses addObject:service.location.host];
                     
+#warning 这个IP地址数组中虽然可以支持Ip+port 但是还需要筛选出支持自己支持通信的IP
+                    
                 } else {
+                    
                 }
             }];
             
             NSLog(@"可用IP为：%@",Target_IP_Addresses);
-            //            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
-//            
-//            [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-//            [self.tableView endUpdates];
+            
         }
         
         
@@ -167,6 +163,14 @@
     NSLog(@"SSDP Browser removed: %@", service);
 }
 
+-(void)isSupport:(GCDAsyncSocket*)sock{
+        NSString *test = @"connect";
+        NSData *data = [test dataUsingEncoding:NSUTF8StringEncoding];
+        [sock readDataWithTimeout:-1 tag:1];
+        [sock writeData:data withTimeout:-1 tag:1];
+        [sock disconnect];
+
+}
 
 
 
