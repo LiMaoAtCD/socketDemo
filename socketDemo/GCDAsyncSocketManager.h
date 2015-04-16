@@ -9,14 +9,27 @@
 #import <Foundation/Foundation.h>
 #import <GCDAsyncSocket.h>
 
+#import <CocoaSSDP/SSDPServiceBrowser.h>
+#import <CocoaSSDP/SSDPService.h>
+#import <CocoaSSDP/SSDPServiceTypes.h>
+
 #define kRemoteHost @"10.0.0.19"
 #define kPort   10099
 
-@interface GCDAsyncSocketManager : NSObject<GCDAsyncSocketDelegate>
+typedef void(^ConnectBlock)(BOOL success);
+
+@interface GCDAsyncSocketManager : NSObject<GCDAsyncSocketDelegate,SSDPServiceBrowserDelegate>
 {
     GCDAsyncSocket *socket;
+    SSDPServiceBrowser *_browser;
+    NSMutableArray *IP_Items;
+    ConnectBlock block;
+    
+    NSMutableArray * Target_IP_Addresses;
     
 }
+
+
 
 +(instancetype)DefaultManager;
 

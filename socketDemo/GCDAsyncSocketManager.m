@@ -13,11 +13,19 @@
 
 
 +(instancetype)DefaultManager{
+    
     static GCDAsyncSocketManager* manager;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         manager = [[self alloc] init];
         manager->socket = [[GCDAsyncSocket alloc] initWithDelegate:manager delegateQueue:dispatch_get_main_queue()];
+        manager->IP_Items = [[NSMutableArray alloc] init];
+        
+        manager->_browser = [[SSDPServiceBrowser alloc] initWithServiceType:SSDPServiceType_All];
+        manager->_browser.delegate = manager;
+        [manager->_browser startBrowsingForServices];
+        manager->Target_IP_Addresses =[[NSMutableArray alloc] init];
+        
     });
     
     return manager;
@@ -31,10 +39,18 @@
         NSLog(@"%@",error);
     }
     
-    //    NSString *test = @"test";
-    //  NSData *data = [test dataUsingEncoding:NSUTF8StringEncoding];
-    //    [socket readDataWithTimeout:-1 tag:1];
-    //    [socket writeData:data withTimeout:-1 tag:1];
+}
+
+-(void)connectToIPAddress:(NSString *)IP withCompletionHandler:(ConnectBlock)completionHandler{
+    
+    NSError *error;
+    [socket disconnect];
+    if (![socket connectToHost:IP onPort:kPort error:&error]) {
+        NSLog(@"%@",error);
+    }
+    block = completionHandler;
+
+    
 }
 
 
@@ -53,11 +69,14 @@
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port{
    
     NSLog(@"connected");
-    NSString *test = @"test";
-    NSData *data = [test dataUsingEncoding:NSUTF8StringEncoding];
-    [sock readDataWithTimeout:-1 tag:1];
-    [sock writeData:data withTimeout:-1 tag:1];
-    [sock disconnect];
+    //TODO::
+//    NSString *test = @"test";
+//    NSData *data = [test dataUsingEncoding:NSUTF8StringEncoding];
+//    [sock readDataWithTimeout:-1 tag:1];
+//    [sock writeData:data withTimeout:-1 tag:1];
+//    [sock disconnect];
+    
+    block(YES);
 
 }
 
@@ -65,6 +84,10 @@
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err{
     NSLog(@"disconnected");
+    if (block) {
+        block(NO);
+    }
+
 }
 
 - (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
@@ -90,6 +113,60 @@
 - (void)socket:(GCDAsyncSocket *)sock didReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)tag{
     
 }
+
+
+#pragma mark - SSDP browser delegate methods
+
+- (void) ssdpBrowser:(SSDPServiceBrowser *)browser didNotStartBrowsingForServices:(NSError *)error {
+    NSLog(@"SSDP Browser got error: %@", error);
+//    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:error.domain message:error.localizedDescription delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil];
+//    [alert show];
+}
+
+- (void) ssdpBrowser:(SSDPServiceBrowser *)browser didFindService:(SSDPService *)service {
+    NSLog(@"SSDP Browser found: %@", service);
+    
+    if (service.location.host != nil) {
+        
+        BOOL shouldInsert = YES;
+        if (IP_Items.count >0) {
+            for (int index = 0; index < IP_Items.count; index++) {
+                shouldInsert = YES;
+                if ([IP_Items[index] isEqualToString:service.location.host]) {
+                    shouldInsert = NO;
+                    break;
+                }
+            }
+        }
+        if (shouldInsert) {
+//            [self.tableView beginUpdates];
+            [IP_Items insertObject:service.location.host atIndex:0];
+//            [self connectToIPAddress:service.location.host];
+            [self connectToIPAddress:service.location.host withCompletionHandler:^(BOOL success) {
+                if(success) {
+                    [Target_IP_Addresses addObject:service.location.host];
+                    
+                } else {
+                }
+            }];
+            
+            NSLog(@"可用IP为：%@",Target_IP_Addresses);
+            //            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
+//            
+//            [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+//            [self.tableView endUpdates];
+        }
+        
+        
+    }
+    
+    
+}
+
+- (void) ssdpBrowser:(SSDPServiceBrowser *)browser didRemoveService:(SSDPService *)service {
+    NSLog(@"SSDP Browser removed: %@", service);
+}
+
 
 
 
